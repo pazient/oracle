@@ -3,7 +3,7 @@ const token = '7741996710:AAE6ceDN65YFT5KjzmnwpzAMpOPl2SxGxFE';
 const bot = new TelegramBot(token, { polling: true });
 
 // Ваша ссылка на приложение, которое вы хотите открыть в WebView
-const webAppUrl = 'https://pazient.github.io/Oracle';
+const webAppUrl = 'https://r8m23.ru/OracleApp/';
 
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
