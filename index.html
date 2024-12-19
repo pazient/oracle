@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Треугольники с датами и сферами</title>
+    <style>
+        canvas {
+            display: block;
+            margin: auto;
+            background-color: #222;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const degreesPerDay = 360 / 365;
+
+        let currentDay = 0; // Для динамического треугольника
+        let isDragging = false; // Для перетаскивания
+
+        // Получаем текущий день года для статического треугольника
+        const now = new Date();
+        const currentRealTimeDay = Math.floor(
+            (now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)
+        );
+
+        // Конвертация номера дня в дату
+        function dayToDate(dayOfYear) {
+            const date = new Date(new Date().getFullYear(), 0, 1); // 1 января текущего года
+            date.setDate(dayOfYear); // Добавляем дни
+            const day = date.getDate();
+            const month = date.toLocaleString('default', { month: 'short' }); // Получаем месяц (сокращенное имя)
+            return `${day} ${month}`;
+        }
+
+        // Отрисовка круга
+        function drawOuterCircles() {
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+
+            // Внешний круг
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 200, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Внутренний круг
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 140, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Отрисовка треугольника
+        function drawTriangle(day, color, lineWidth, radius) {
+            const vertices = [];
+
+            // Вычисляем три вершины треугольника
+            for (let i = 0; i < 3; i++) {
+                const angle = ((day * degreesPerDay + i * 120 - 90) % 360) * (Math.PI / 180);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                vertices.push({ x, y });
+            }
+
+            // Отрисовка треугольника
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            vertices.forEach((v, index) => {
+                if (index > 0) ctx.lineTo(v.x, v.y);
+            });
+            ctx.closePath();
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+
+            // Отображаем данные на вершинах
+            vertices.forEach((vertex, index) => {
+                const offsetAngle = index * 120;
+                drawVertexData(vertex, day, offsetAngle);
+                drawSphere(vertex.x, vertex.y, 5, color); // Добавляем сферу
+            });
+        }
+
+        // Отображаем данные для вершины
+        function drawVertexData(vertex, day, offsetAngle) {
+            const dayOfYear = Math.floor((day * degreesPerDay + offsetAngle) / degreesPerDay) % 365;
+            const dateString = dayToDate(dayOfYear + 1); // Преобразуем номер дня в дату
+
+            // Отображение даты
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${dateString}`, vertex.x, vertex.y - 20);
+        }
+
+        // Отрисовка сферы на вершине
+        function drawSphere(x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Главная функция для отрисовки
+        function drawAll() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка кругов
+            drawOuterCircles();
+
+            // Статический треугольник (меньший радиус)
+            drawTriangle(currentRealTimeDay, 'gray', 2, 140);
+
+            // Динамический треугольник (больший радиус)
+            drawTriangle(currentDay, 'blue', 2, 180);
+        }
+
+        // Обработка вращения мышью (скролл)
+        canvas.addEventListener('wheel', (event) => {
+            currentDay = (currentDay + (event.deltaY > 0 ? 1 : -1)) % 365;
+            if (currentDay < 0) currentDay += 365;
+            drawAll();
+        });
+
+        // Обработка перетаскивания мышью
+        canvas.addEventListener('mousedown', () => (isDragging = true));
+        canvas.addEventListener('mouseup', () => (isDragging = false));
+        canvas.addEventListener('mousemove', (event) => {
+            if (isDragging) {
+                const dx = event.offsetX - centerX;
+                const dy = event.offsetY - centerY;
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+                currentDay = Math.floor((angle + 360) % 360 / degreesPerDay);
+                drawAll();
+            }
+        });
+
+        // Для мобильных устройств: перетаскивание пальцем
+        canvas.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            isDragging = true;
+        });
+
+        canvas.addEventListener('touchend', () => (isDragging = false));
+        canvas.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+            const touch = event.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const dx = touch.clientX - rect.left - centerX;
+            const dy = touch.clientY - rect.top - centerY;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+            currentDay = Math.floor((angle + 360) % 360 / degreesPerDay);
+            drawAll();
+        });
+
+        // Инициализация
+        drawAll();
+    </script>
+</body>
+</html>
